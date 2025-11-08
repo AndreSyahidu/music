@@ -1,0 +1,56 @@
+# PHP Music Player - Apache Configuration
+
+# Disable directory listing
+Options -Indexes
+
+# Enable rewrite engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+</IfModule>
+
+# Protect sensitive files
+<FilesMatch "^(playlist\.json|\.htaccess)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
+
+# Allow audio files
+<FilesMatch "\.(mp3|wav|ogg|m4a|flac)$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
+
+# Set correct MIME types for audio files
+<IfModule mod_mime.c>
+    AddType audio/mpeg .mp3
+    AddType audio/wav .wav
+    AddType audio/ogg .ogg
+    AddType audio/mp4 .m4a
+    AddType audio/flac .flac
+</IfModule>
+
+# Enable CORS for audio files (if needed)
+<IfModule mod_headers.c>
+    <FilesMatch "\.(mp3|wav|ogg|m4a|flac)$">
+        Header set Access-Control-Allow-Origin "*"
+    </FilesMatch>
+</IfModule>
+
+# Compression for static files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css application/javascript application/json
+</IfModule>
+
+# Browser caching
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType audio/mpeg "access plus 1 month"
+    ExpiresByType audio/wav "access plus 1 month"
+    ExpiresByType audio/ogg "access plus 1 month"
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+</IfModule>
+
+# Limit upload size (adjust based on your needs)
+php_value upload_max_filesize 50M
+php_value post_max_size 50M
