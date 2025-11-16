@@ -1,7 +1,14 @@
 <?php
 /**
- * MBD MUSIC PLAYER PRO v3.0
- * Mobile First Music Player with Revolutionary UX
+ * MBD MUSIC PLAYER PRO v4.0
+ * 100x Better - The Ultimate Music Player
+ *
+ * New Features:
+ * - Progressive Web App (PWA) with offline support
+ * - Advanced Audio Engine (Web Audio API, Real Equalizer, Waveform)
+ * - Smart Playlist System (Favorites, Custom Playlists, Queue)
+ * - Premium Features (Sleep Timer, Speed Control, Crossfade, Lyrics)
+ * - Gesture Controls & Statistics Dashboard
  *
  * Brand: MBD Corp
  * Copyright (c) 2025 MBD Corporation
@@ -43,7 +50,8 @@ function scanMusicFolders($baseDir) {
                         'title' => $title,
                         'file' => $relativePath,
                         'size' => $fileSizeMB,
-                        'format' => strtoupper($extension)
+                        'format' => strtoupper($extension),
+                        'duration' => 0 // Will be calculated client-side
                     ];
                 }
             }
@@ -83,12 +91,18 @@ $totalSongs = getTotalSongs($playlists);
     <meta name="theme-color" content="#0A1E3D">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="description" content="MBD Music Player - Professional Mobile-First Music Experience">
+    <meta name="apple-mobile-web-app-title" content="MBD Music">
+    <meta name="description" content="MBD Music Player Pro v4.0 - Ultimate Music Experience with PWA, Real Equalizer, Favorites, Custom Playlists & More">
+    <meta name="keywords" content="music player, PWA, offline music, equalizer, playlist, MBD">
 
-    <title>MBD Music Player Pro</title>
+    <title>MBD Music Player Pro v4.0</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
 
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
 
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -98,12 +112,29 @@ $totalSongs = getTotalSongs($playlists);
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="light-mode">
+
+    <!-- PWA Install Prompt -->
+    <div class="pwa-install-banner" id="pwa-install-banner">
+        <div class="pwa-banner-content">
+            <div class="pwa-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="pwa-text">
+                <strong>Install MBD Music</strong>
+                <p>Add to home screen for offline access</p>
+            </div>
+            <button class="pwa-install-btn" id="pwa-install-btn">Install</button>
+            <button class="pwa-dismiss-btn" id="pwa-dismiss-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
 
     <!-- Mobile App Container -->
     <div class="app-wrapper">
@@ -120,7 +151,7 @@ $totalSongs = getTotalSongs($playlists);
                     </div>
                     <div class="brand-text">
                         <span class="brand-name">MBD</span>
-                        <span class="brand-subtitle">Music</span>
+                        <span class="brand-subtitle">Music Pro</span>
                     </div>
                 </div>
             </div>
@@ -159,6 +190,26 @@ $totalSongs = getTotalSongs($playlists);
                 <h2>Your Library</h2>
                 <button class="close-sidebar" id="close-sidebar">
                     <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="quick-actions">
+                <button class="quick-action-btn" id="view-favorites">
+                    <i class="fas fa-heart"></i>
+                    <span>Favorites</span>
+                </button>
+                <button class="quick-action-btn" id="view-recent">
+                    <i class="fas fa-clock"></i>
+                    <span>Recent</span>
+                </button>
+                <button class="quick-action-btn" id="view-stats">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Statistics</span>
+                </button>
+                <button class="quick-action-btn" id="create-playlist-btn">
+                    <i class="fas fa-plus"></i>
+                    <span>New Playlist</span>
                 </button>
             </div>
 
@@ -221,13 +272,17 @@ $totalSongs = getTotalSongs($playlists);
 
             <!-- Now Playing Card -->
             <div class="now-playing-card">
-                <div class="album-artwork-container">
+                <div class="album-artwork-container" id="artwork-container">
                     <div class="artwork-disc" id="artwork-disc">
                         <div class="disc-inner">
                             <i class="fas fa-compact-disc fa-4x"></i>
                         </div>
                         <div class="disc-center"></div>
                     </div>
+
+                    <!-- Waveform Visualization (NEW in v4.0) -->
+                    <canvas class="waveform-canvas" id="waveform-canvas" width="800" height="200"></canvas>
+
                     <!-- Equalizer Bars -->
                     <div class="equalizer-visual" id="equalizer-visual">
                         <span class="eq-bar"></span>
@@ -241,10 +296,13 @@ $totalSongs = getTotalSongs($playlists);
                 <!-- Track Info -->
                 <div class="track-info-section">
                     <h1 class="track-title" id="track-title">Select a Playlist</h1>
-                    <p class="track-artist" id="track-artist">MBD Music Player</p>
+                    <p class="track-artist" id="track-artist">MBD Music Player Pro v4.0</p>
                     <div class="track-badges">
                         <span class="badge" id="track-format"><i class="fas fa-file-audio"></i> --</span>
                         <span class="badge" id="track-position"><i class="fas fa-list-ol"></i> -- / --</span>
+                        <button class="badge-btn favorite-btn" id="favorite-btn" aria-label="Favorite">
+                            <i class="far fa-heart"></i>
+                        </button>
                     </div>
                 </div>
 
@@ -279,11 +337,35 @@ $totalSongs = getTotalSongs($playlists);
                     </button>
                 </div>
 
+                <!-- Advanced Controls (NEW in v4.0) -->
+                <div class="advanced-controls">
+                    <button class="advanced-btn" id="speed-btn" aria-label="Playback Speed">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span id="speed-label">1.0x</span>
+                    </button>
+                    <button class="advanced-btn" id="equalizer-btn" aria-label="Equalizer">
+                        <i class="fas fa-sliders-h"></i>
+                        <span>EQ</span>
+                    </button>
+                    <button class="advanced-btn" id="sleep-timer-btn" aria-label="Sleep Timer">
+                        <i class="fas fa-moon"></i>
+                        <span id="sleep-timer-label">Timer</span>
+                    </button>
+                    <button class="advanced-btn" id="lyrics-btn" aria-label="Lyrics">
+                        <i class="fas fa-align-left"></i>
+                        <span>Lyrics</span>
+                    </button>
+                </div>
+
                 <!-- Volume & More Controls -->
                 <div class="secondary-controls">
                     <button class="secondary-btn" id="volume-toggle-btn" aria-label="Volume">
                         <i class="fas fa-volume-up"></i>
                         <span class="volume-badge" id="volume-badge">70%</span>
+                    </button>
+                    <button class="secondary-btn" id="queue-btn" aria-label="Queue">
+                        <i class="fas fa-list-ol"></i>
+                        <span class="queue-badge" id="queue-badge">0</span>
                     </button>
                     <button class="secondary-btn" id="playlist-btn" aria-label="Playlist">
                         <i class="fas fa-list"></i>
@@ -311,7 +393,9 @@ $totalSongs = getTotalSongs($playlists);
 
         </main>
 
-        <!-- Volume Control Modal (Revolutionary UX) -->
+        <!-- ========== MODALS ========== -->
+
+        <!-- Volume Control Modal -->
         <div class="volume-modal" id="volume-modal">
             <div class="volume-modal-content">
                 <div class="volume-modal-header">
@@ -359,17 +443,227 @@ $totalSongs = getTotalSongs($playlists);
             </div>
         </div>
 
+        <!-- Equalizer Modal (NEW v4.0) -->
+        <div class="equalizer-modal" id="equalizer-modal">
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-sliders-h"></i>
+                        10-Band Equalizer
+                    </h3>
+                    <button class="modal-close" id="equalizer-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="eq-presets">
+                    <button class="eq-preset-btn active" data-preset="flat">Flat</button>
+                    <button class="eq-preset-btn" data-preset="bass">Bass Boost</button>
+                    <button class="eq-preset-btn" data-preset="treble">Treble</button>
+                    <button class="eq-preset-btn" data-preset="vocal">Vocal</button>
+                    <button class="eq-preset-btn" data-preset="rock">Rock</button>
+                    <button class="eq-preset-btn" data-preset="pop">Pop</button>
+                </div>
+                <div class="eq-sliders" id="eq-sliders">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+                <div class="eq-footer">
+                    <button class="btn-secondary" id="eq-reset">Reset</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Speed Control Modal (NEW v4.0) -->
+        <div class="speed-modal" id="speed-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-tachometer-alt"></i>
+                        Playback Speed
+                    </h3>
+                    <button class="modal-close" id="speed-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="speed-display">
+                    <span id="speed-value">1.0x</span>
+                </div>
+                <input type="range" id="speed-slider" min="50" max="200" step="5" value="100" class="speed-slider">
+                <div class="speed-presets">
+                    <button class="speed-preset-btn" data-speed="50">0.5x</button>
+                    <button class="speed-preset-btn" data-speed="75">0.75x</button>
+                    <button class="speed-preset-btn active" data-speed="100">1.0x</button>
+                    <button class="speed-preset-btn" data-speed="125">1.25x</button>
+                    <button class="speed-preset-btn" data-speed="150">1.5x</button>
+                    <button class="speed-preset-btn" data-speed="200">2.0x</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sleep Timer Modal (NEW v4.0) -->
+        <div class="sleep-timer-modal" id="sleep-timer-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-moon"></i>
+                        Sleep Timer
+                    </h3>
+                    <button class="modal-close" id="sleep-timer-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="sleep-timer-status" id="sleep-timer-status">
+                    <p>No timer set</p>
+                </div>
+                <div class="sleep-timer-presets">
+                    <button class="sleep-preset-btn" data-minutes="5">5 min</button>
+                    <button class="sleep-preset-btn" data-minutes="15">15 min</button>
+                    <button class="sleep-preset-btn" data-minutes="30">30 min</button>
+                    <button class="sleep-preset-btn" data-minutes="60">1 hour</button>
+                </div>
+                <div class="sleep-timer-custom">
+                    <input type="number" id="sleep-custom-minutes" min="1" max="180" placeholder="Custom (minutes)">
+                    <button class="btn-primary" id="sleep-custom-set">Set</button>
+                </div>
+                <button class="btn-danger" id="sleep-timer-cancel" style="display: none;">Cancel Timer</button>
+            </div>
+        </div>
+
+        <!-- Lyrics Modal (NEW v4.0) -->
+        <div class="lyrics-modal" id="lyrics-modal">
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-align-left"></i>
+                        Lyrics
+                    </h3>
+                    <button class="modal-close" id="lyrics-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="lyrics-content" id="lyrics-content">
+                    <p class="lyrics-empty">No lyrics available for this song</p>
+                </div>
+                <button class="btn-secondary" id="edit-lyrics-btn">Edit Lyrics</button>
+            </div>
+        </div>
+
+        <!-- Queue Modal (NEW v4.0) -->
+        <div class="queue-modal" id="queue-modal">
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-list-ol"></i>
+                        Queue
+                    </h3>
+                    <button class="modal-close" id="queue-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="queue-actions">
+                    <button class="btn-secondary" id="save-queue-btn">
+                        <i class="fas fa-save"></i>
+                        Save as Playlist
+                    </button>
+                    <button class="btn-danger" id="clear-queue-btn">
+                        <i class="fas fa-trash"></i>
+                        Clear Queue
+                    </button>
+                </div>
+                <div class="queue-list" id="queue-list">
+                    <div class="empty-state">
+                        <i class="fas fa-list-ol fa-3x"></i>
+                        <p>Queue is empty</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Modal (NEW v4.0) -->
+        <div class="stats-modal" id="stats-modal">
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h3>
+                        <i class="fas fa-chart-bar"></i>
+                        Statistics & Insights
+                    </h3>
+                    <button class="modal-close" id="stats-modal-close">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+
+                <!-- Listening Time Stats -->
+                <div class="stats-section">
+                    <h4><i class="fas fa-clock"></i> Listening Time</h4>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="total-time-today">0h 0m</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="total-time-week">0h 0m</div>
+                            <div class="stat-label">This Week</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="total-time-all">0h 0m</div>
+                            <div class="stat-label">All Time</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Most Played Songs -->
+                <div class="stats-section">
+                    <h4><i class="fas fa-fire"></i> Most Played</h4>
+                    <div class="most-played-list" id="most-played-list">
+                        <p>No data yet</p>
+                    </div>
+                </div>
+
+                <!-- Recently Played -->
+                <div class="stats-section">
+                    <h4><i class="fas fa-history"></i> Recently Played</h4>
+                    <div class="recent-list" id="recent-list">
+                        <p>No recent tracks</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Context Menu (NEW v4.0) -->
+        <div class="context-menu" id="context-menu">
+            <button class="context-item" id="ctx-add-to-favorites">
+                <i class="fas fa-heart"></i>
+                Add to Favorites
+            </button>
+            <button class="context-item" id="ctx-add-to-queue">
+                <i class="fas fa-plus"></i>
+                Add to Queue
+            </button>
+            <button class="context-item" id="ctx-add-to-playlist">
+                <i class="fas fa-list"></i>
+                Add to Playlist
+            </button>
+            <button class="context-item" id="ctx-view-lyrics">
+                <i class="fas fa-align-left"></i>
+                View Lyrics
+            </button>
+            <button class="context-item" id="ctx-song-info">
+                <i class="fas fa-info-circle"></i>
+                Song Info
+            </button>
+        </div>
+
         <!-- Bottom Safe Area -->
         <div class="bottom-safe-area"></div>
     </div>
 
     <!-- Audio Element -->
-    <audio id="audio-player" preload="metadata"></audio>
+    <audio id="audio-player" preload="metadata" crossorigin="anonymous"></audio>
 
-    <!-- Loading Indicator -->
+    <!-- Loading Overlay -->
     <div class="loading-overlay" id="loading-overlay">
         <div class="loading-spinner">
             <i class="fas fa-compact-disc fa-spin"></i>
+            <p id="loading-text">Loading...</p>
         </div>
     </div>
 
@@ -377,10 +671,32 @@ $totalSongs = getTotalSongs($playlists);
     <script>
         const playlistsData = <?php echo json_encode($playlists); ?>;
         const APP_CONFIG = {
-            name: 'MBD Music Player',
-            version: '3.0',
-            brand: 'MBD Corp'
+            name: 'MBD Music Player Pro',
+            version: '4.0.0',
+            brand: 'MBD Corp',
+            features: {
+                pwa: true,
+                offline: true,
+                equalizer: true,
+                waveform: true,
+                favorites: true,
+                customPlaylists: true,
+                queue: true,
+                sleepTimer: true,
+                speedControl: true,
+                crossfade: true,
+                lyrics: true,
+                statistics: true,
+                gestures: true
+            }
         };
+
+        // Register Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(reg => console.log('✅ Service Worker registered:', reg))
+                .catch(err => console.error('❌ Service Worker registration failed:', err));
+        }
     </script>
 
     <script src="script.js"></script>

@@ -1,0 +1,62 @@
+{
+  "name": "MBD Music Player Pro",
+  "short_name": "MBD Music",
+  "description": "Professional Mobile-First Music Player with Advanced Features - Powered by MBD Corp",
+  "start_url": "/player/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0A1E3D",
+  "theme_color": "#0A1E3D",
+  "categories": ["music", "entertainment", "multimedia"],
+  "lang": "id-ID",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect fill='%230A1E3D' width='192' height='192' rx='48'/%3E%3Ctext x='96' y='140' font-size='120' text-anchor='middle' fill='%23F59E0B'%3E🎵%3C/text%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect fill='%230A1E3D' width='512' height='512' rx='128'/%3E%3Ctext x='256' y='380' font-size='320' text-anchor='middle' fill='%23F59E0B'%3E🎵%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'%3E%3Crect fill='%23F5F7FA' width='540' height='720'/%3E%3Crect fill='%230A1E3D' width='540' height='80'/%3E%3Ctext x='270' y='50' font-size='24' text-anchor='middle' fill='%23F59E0B' font-weight='bold'%3EMBD Music%3C/text%3E%3C/svg%3E",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Favorites",
+      "short_name": "Favorites",
+      "description": "Open your favorite songs",
+      "url": "/player/?view=favorites",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext x='48' y='72' font-size='60' text-anchor='middle'%3E❤️%3C/text%3E%3C/svg%3E",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Recently Played",
+      "short_name": "Recent",
+      "description": "View recently played songs",
+      "url": "/player/?view=recent",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'%3E%3Ctext x='48' y='72' font-size='60' text-anchor='middle'%3E🕒%3C/text%3E%3C/svg%3E",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false
+}
